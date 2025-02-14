@@ -1,0 +1,7 @@
+config/api_configs.json
+modules/models/
+models/
+logs/
+__pycache__/
+*.pyc
+.DS_Store

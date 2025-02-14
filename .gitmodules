@@ -1,0 +1,6 @@
+[submodule "modules/Janus"]
+	path = modules/Janus
+	url = https://github.com/deepseek-ai/Janus.git
+[submodule "modules/mPLUG-Owl"]
+	path = modules/mPLUG-Owl
+	url = https://github.com/X-PLUG/mPLUG-Owl.git

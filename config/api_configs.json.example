@@ -1,0 +1,56 @@
+{
+    "api_configs": [
+        {
+            "name": "deepseek",
+            "api_key": "YOUR_API_KEY",
+            "base_url": "YOUR_BASE_URL",
+            "models": {
+                "chat": "deepseek-chat",
+                "reasoner": "deepseek-reasoner"
+            }
+        },
+        {
+            "name": "siliconflow",
+            "api_key": "YOUR_API_KEY",
+            "base_url": "YOUR_BASE_URL",
+            "models": {
+                "chat": "deepseek-ai/DeepSeek-V3",
+                "reasoner": "deepseek-ai/DeepSeek-R1"
+            }
+        },
+        {
+            "name": "openrouter",
+            "api_key": "YOUR_API_KEY",
+            "base_url": "YOUR_BASE_URL",
+            "models": {
+                "chat": "deepseek/deepseek-chat:free",
+                "reasoner": "deepseek/deepseek-r1:free"
+            }
+        },
+        {
+            "name": "azure",
+            "api_key": "YOUR_API_KEY",
+            "api_version": "2024-05-01-preview",
+            "base_url": "YOUR_BASE_URL",
+            "models": {
+                "chat": "DeepSeek-R1"  
+            }
+        },
+        {
+            "name": "GitHub",
+            "endpoint": "YOUR_BASE_URL",
+            "api_key": "YOUR_API_KEY",
+            "model_name": "DeepSeek-R1"
+        },
+        {
+            "name": "qwen",
+            "base_url": "YOUR_BASE_URL",
+            "api_key": "YOUR_API_KEY",
+            "models": {
+                "chat": "qwen-plus",
+                "reasoner": "qwen-max"  
+            }
+        }
+    ],
+    "default_model": "chat"
+} 

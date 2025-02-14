@@ -1,0 +1,24 @@
+# Janus model config
+janus:
+  prompt_file: "key_frame_understanding_zh.md"
+  model: "deepseek-ai/Janus-Pro-1B"
+  max_tokens: 4096
+  max_frames: 16
+  device: "mps"
+
+# Owl3 model config
+owl3:
+  python_path: "/opt/anaconda3/envs/owl3/bin/python"
+  prompt_file: "video_understanding_movement_en.md"
+  model: "mPLUG/mPLUG-Owl3-2B-241014"
+  max_tokens: 4096
+  max_frames: 16
+  device: "mps"
+
+# lower number means higher priority
+provider_priorities:
+  siliconflow: 2
+  deepseek_call: 4
+  github_call: 5
+  azure_call: 3 
+  qwen_call: 1
