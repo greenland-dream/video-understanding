@@ -53,8 +53,14 @@ def _encode_video(video_path: str, max_num_frames: int = 16) -> list:
     sample_fps = round(vr.get_avg_fps() / 1)  # Adjust sampling rate as needed
     frame_indices = list(range(0, len(vr), sample_fps))
     
+    logger.info(f"Video has {len(vr)} total frames, sampled {len(frame_indices)} frames at {sample_fps} frame interval")
+    logger.info(f"Max frames parameter set to: {max_num_frames}")
+    
     if len(frame_indices) > max_num_frames:
         frame_indices = _uniform_sample(frame_indices, max_num_frames)
+        logger.info(f"Limiting to {len(frame_indices)} frames after uniform sampling")
+    else:
+        logger.info(f"Using all {len(frame_indices)} sampled frames (below max limit)")
     
     frames = vr.get_batch(frame_indices).asnumpy()
     frames = [Image.fromarray(frame.astype('uint8')) for frame in frames]

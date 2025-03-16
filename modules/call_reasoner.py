@@ -3,10 +3,7 @@ from pathlib import Path
 import importlib
 from utils.log_config import setup_logger
 import time
-from functools import wraps
-import signal
 from datetime import datetime, timedelta
-from utils.log_config import setup_logger
 import yaml
 
 # Get logger using module name as identifier
@@ -44,14 +41,14 @@ class ProviderStatus:
         
         return time_since_failure > cooldown_period
 
-# 加载配置文件
+# Load configuration file
 def load_provider_priorities():
     config_path = Path(__file__).parent.parent / "config" / "model_config.yaml"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
     return config.get('provider_priorities', {})
 
-# 初始化 provider 状态，使用配置文件中的优先级
+# Initialize provider status using priorities from config file
 PROVIDER_STATUS = {
     name: ProviderStatus(name, priority)
     for name, priority in load_provider_priorities().items()
@@ -67,32 +64,7 @@ def get_sorted_providers():
     ]
     return sorted(available_providers, key=lambda x: x.current_priority)
 
-def timeout_handler(signum, frame):
-    raise TimeoutError("Request timeout")
-
-def with_timeout(timeout_seconds=30):
-    """
-    Decorator: Add timeout limit to function
-    
-    Args:
-        timeout_seconds: Timeout duration in seconds
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout_seconds)
-            try:
-                result = func(*args, **kwargs)
-                signal.alarm(0)  # Clear alarm
-                return result
-            except TimeoutError:
-                signal.alarm(0)  # Clear alarm
-                raise
-        return wrapper
-    return decorator
-
-def route_providers(provider, meta_data, duration, transcript, key_frame_analyzing_results, video_analyzing_results, prompt, max_retries=2, retry_delay=2, timeout=30):
+def route_providers(provider, meta_data, duration, transcript, key_frame_analyzing_results, video_analyzing_results, prompt, max_retries=3, retry_delay=2, timeout=100):
     """
     Try different API providers to call LLM service with dynamic priority
     
@@ -106,28 +78,55 @@ def route_providers(provider, meta_data, duration, transcript, key_frame_analyzi
         prompt: Prompt template filename
         max_retries: Maximum retry attempts
         retry_delay: Delay between retries in seconds
-        timeout: Request timeout in seconds
+        timeout: Request timeout in seconds for API calls
     """
     last_error = None
+    
+    # Record start time
+    start_time = time.time()
+    logger.info(f"Starting route_providers with API timeout={timeout}s, max_retries={max_retries}")
     
     # If provider specified, only try that provider
     if provider:
         providers_to_try = [PROVIDER_STATUS[provider]] if provider in PROVIDER_STATUS else []
+        logger.info(f"Using specified provider: {provider}")
     else:
         # Get available providers sorted by priority
         providers_to_try = get_sorted_providers()
+        logger.info(f"Available providers (in priority order): {[p.name for p in providers_to_try]}")
     
     for provider_status in providers_to_try:
         provider_name = provider_status.name
+        logger.info(f"Trying provider: {provider_name} (priority: {provider_status.current_priority})")
+        
         for attempt in range(max_retries):
+            attempt_start = time.time()
+            logger.info(f"Attempt {attempt + 1}/{max_retries} for provider {provider_name}")
+            
             try:
                 # Dynamically import provider module
+                logger.info(f"Importing module for provider: {provider_name}")
                 module = importlib.import_module(f"modules.LLMcalls.{provider_name}")
                 
-                # Add timeout control
-                @with_timeout(timeout)
-                def call_with_timeout():
-                    return module.unify_results(
+                # Call provider's unify_results method with timeout parameter
+                logger.info(f"Executing API call to {provider_name} with timeout={timeout}s")
+                
+                # We need to modify the provider modules to accept the timeout parameter
+                # For now, we'll try to pass it, and if it fails, we'll catch the exception
+                try:
+                    result = module.unify_results(
+                        meta_data,
+                        duration,
+                        transcript,
+                        key_frame_analyzing_results,
+                        video_analyzing_results,
+                        prompt,
+                        timeout=timeout  # Pass timeout to provider module
+                    )
+                except TypeError:
+                    # If the provider doesn't accept the timeout parameter yet, call without it
+                    logger.warning(f"Provider {provider_name} doesn't accept timeout parameter, calling without it")
+                    result = module.unify_results(
                         meta_data,
                         duration,
                         transcript,
@@ -136,23 +135,29 @@ def route_providers(provider, meta_data, duration, transcript, key_frame_analyzi
                         prompt
                     )
                 
-                # Call provider's unify_results method
-                result = call_with_timeout()
+                attempt_duration = time.time() - attempt_start
+                logger.info(f"API call to {provider_name} completed in {attempt_duration:.2f}s")
                 
                 if result:
                     # Record success and return result
                     provider_status.record_success()
+                    total_duration = time.time() - start_time
+                    logger.info(f"Successfully got result from {provider_name} in {total_duration:.2f}s")
                     return result
+                else:
+                    logger.warning(f"{provider_name} returned empty result")
                     
-            except (TimeoutError, Exception) as e:
+            except Exception as e:
                 last_error = e
+                attempt_duration = time.time() - attempt_start
+                
                 # Record failure and update priority
                 provider_status.record_failure()
                 
-                if isinstance(e, TimeoutError):
-                    logger.error(f"{provider_name} request timeout ({timeout}s)")
+                if "timeout" in str(e).lower():
+                    logger.error(f"{provider_name} request timeout after {attempt_duration:.2f}s (limit: {timeout}s)")
                 else:
-                    logger.error(f"{provider_name} attempt {attempt + 1} failed: {str(e)}")
+                    logger.error(f"{provider_name} attempt {attempt + 1} failed after {attempt_duration:.2f}s: {str(e)}")
                     logger.debug(traceback.format_exc())
                 
             if attempt < max_retries - 1:
@@ -160,7 +165,8 @@ def route_providers(provider, meta_data, duration, transcript, key_frame_analyzi
                 time.sleep(retry_delay)
     
     # If all providers failed
-    logger.error("All providers failed")
+    total_duration = time.time() - start_time
+    logger.error(f"All providers failed after {total_duration:.2f}s")
     if last_error:
         raise last_error
     return None

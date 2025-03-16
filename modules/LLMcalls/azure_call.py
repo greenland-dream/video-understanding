@@ -25,9 +25,18 @@ def load_api_configs():
         logger.error(f"Failed to load API config file: {str(e)}")
         raise
 
-def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str):
+def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str, timeout: int = 100):
     """
     Unify analysis results using Azure API
+    
+    Args:
+        meta_data: Metadata
+        duration: Duration of the video
+        transcript: Transcription text
+        key_frame_analyzing_results: Key frame analysis results
+        video_analyzing_results: Video analysis results
+        prompt: Prompt template filename
+        timeout: Request timeout in seconds (default: 100)
     """
     try:
         # Read prompt template
@@ -59,6 +68,7 @@ def unify_results(meta_data: str, duration: str, transcript: str, key_frame_anal
             azure_endpoint=config["base_url"],  
             api_key=config["api_key"],  
             api_version=config["api_version"],
+            timeout=timeout  # Set timeout for API calls
         )
             
         #Prepare the chat prompt 
@@ -67,24 +77,33 @@ def unify_results(meta_data: str, duration: str, transcript: str, key_frame_anal
         ]
         
         model = config["models"].get("chat")
-        # Generate the completion  
-        completion = client.chat.completions.create(  
-            model=model,
-            messages=chat_prompt,
-            max_tokens=4096,  
-            temperature=0.2,  
-            top_p=0.95,  
-            frequency_penalty=0,  
-            presence_penalty=0,
-            stop=None,  
-            stream=False
-        )
+        
+        try:
+            # Generate the completion  
+            completion = client.chat.completions.create(  
+                model=model,
+                messages=chat_prompt,
+                max_tokens=4096,  
+                temperature=0.2,  
+                top_p=0.95,  
+                frequency_penalty=0,  
+                presence_penalty=0,
+                stop=None,  
+                stream=False,
+                timeout=timeout  # Set timeout for this specific request
+            )
 
-        content = completion.choices[0].message.content
+            content = completion.choices[0].message.content
 
-        logger.info("Azure response:")
-        logger.info(f"{content}")
-        return content
+            logger.info("Azure response:")
+            logger.info(f"{content}")
+            return content
+        except Exception as e:
+            if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+                logger.error(f"Azure API request timed out after {timeout}s")
+                raise TimeoutError(f"Azure API request timed out after {timeout}s")
+            else:
+                raise
 
     except Exception as e:
         logger.error(f"Azure API call failed: {str(e)}")

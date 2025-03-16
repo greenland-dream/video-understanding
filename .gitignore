@@ -1,7 +1,14 @@
 config/api_configs.json
+config/model_config.yaml
 modules/models/
 models/
 logs/
+db/data
 __pycache__/
 *.pyc
 .DS_Store
+generation.py
+config/prompts/script_generation.md
+db/explore_chroma.ipynb
+web/static/thumbnails/
+.vsco

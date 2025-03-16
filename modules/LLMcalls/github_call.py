@@ -3,12 +3,10 @@
 > pip install azure-ai-inference
 """
 import os
-from azure.ai.inference import ChatCompletionsClient
-from azure.ai.inference.models import SystemMessage, UserMessage
-from azure.core.credentials import AzureKeyCredential
 from pathlib import Path
 from utils.log_config import setup_logger
 import json
+from openai import OpenAI
 
 # Get logger using module name as identifier
 logger = setup_logger(__name__)
@@ -26,9 +24,18 @@ def load_api_configs():
         logger.error(f"Failed to load API config file: {str(e)}")
         raise
 
-def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str):
+def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str, timeout: int = 100):
     """
     Analyze two results and return the analysis result
+    
+    Args:
+        meta_data: Metadata
+        duration: Duration of the video
+        transcript: Transcription text
+        key_frame_analyzing_results: Key frame analysis results
+        video_analyzing_results: Video analysis results
+        prompt: Prompt template filename
+        timeout: Request timeout in seconds (default: 100)
     """
     try:
         # Load API configurations
@@ -57,27 +64,37 @@ def unify_results(meta_data: str, duration: str, transcript: str, key_frame_anal
         logger.info("Prompt sent to GitHub:")
         logger.info(f"{question}")
 
-        # 使用配置文件中的设置初始化客户端
-        client = ChatCompletionsClient(
-            endpoint=config["endpoint"],
-            credential=AzureKeyCredential(config["api_key"]),
+        # Create client and call API
+        client = OpenAI(
+            api_key=config["api_key"],
+            base_url=config["base_url"],
+            timeout=timeout  # Set timeout for API calls
         )
 
-        # 发送请求
-        response = client.complete(
-            messages=[
-                SystemMessage(content="You are a helpful assistant"),
-                UserMessage(content=question),
-            ],
-            model=config["model_name"],
-            max_tokens=4096,
-        )
+        try:
+            # Send request using OpenAI format
+            response = client.chat.completions.create(
+                model=config["model_name"],
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant"},
+                    {"role": "user", "content": question},
+                ],
+                stream=False,
+                timeout=timeout  # Set timeout for this specific request
+            )
 
-        logger.info("GitHub response:")
-        content = response.choices[0].message.content
-        logger.info(f"{content}")
-        
-        return content
+            logger.info("GitHub response:")
+            content = response.choices[0].message.content
+            logger.info(f"{content}")
+            
+            return content
+        except Exception as e:
+            if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+                logger.error(f"GitHub API request timed out after {timeout}s")
+                raise TimeoutError(f"GitHub API request timed out after {timeout}s")
+            else:
+                logger.error(f"Error calling GitHub API: {str(e)}")
+                raise
 
     except Exception as e:
         logger.error(f"GitHub API call failed: {str(e)}")

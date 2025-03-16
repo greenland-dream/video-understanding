@@ -20,19 +20,19 @@ def transform_tags(raw_tags):
         try:
             tags = json.loads(raw_tags)
         except json.JSONDecodeError as e:
-            print("JSON解析错误:", e)
+            print("JSON parsing error:", e)
             return {}
     elif isinstance(raw_tags, dict):
         tags = raw_tags.copy()
     else:
-        print("不支持的 tags 数据类型")
+        print("Unsupported tags data type")
         return {}
     return tags
-    # 特殊处理：将"详细描述"复制到 description 字段
+    # Special handling: Copy "detailed description" to description field
     # if "详细描述" in tags:
     #     tags["description"] = tags["详细描述"]
     # else:
-    #     tags["description"] = "无描述"
+    #     tags["description"] = "No description"
     # return tags
 
 def embed_metadata_with_exiftool(input_video, transcript, raw_tags):
@@ -109,13 +109,13 @@ def embed_metadata_with_exiftool(input_video, transcript, raw_tags):
         # Add orientation tags
         orientation = get_video_orientation(input_video)
         if orientation == "horizontal":
-            hierarchical_keywords.append("Orientation|horizontal")
+            hierarchical_keywords.append("画面方向|横屏")
             flat_keywords.append("horizontal")
         elif orientation == "vertical":
-            hierarchical_keywords.append("Orientation|vertical")
+            hierarchical_keywords.append("画面方向|竖屏")
             flat_keywords.append("vertical")
         else:
-            hierarchical_keywords.append("Orientation|square")
+            hierarchical_keywords.append("画面方向|方屏")
             flat_keywords.append("square")
 
         # Write Hierarchical Subject field
@@ -151,7 +151,7 @@ def embed_metadata_with_exiftool(input_video, transcript, raw_tags):
         logger.error(f"ExifTool execution error: {e}")
         return isVoiceover, ""
 
-def write_description(folder_path, video, transcript, hierarchical_keywords, raw_tags, isVoiceover, duration):
+def write_description(video, transcript, hierarchical_keywords, raw_tags, isVoiceover, duration):
     """
     Write video descriptions to video_descriptions.txt in the folder
     
@@ -169,6 +169,7 @@ def write_description(folder_path, video, transcript, hierarchical_keywords, raw
     
     # Get video filename without path
     video_name = os.path.basename(video)
+    folder_path = os.path.dirname(video)
     description_file = os.path.join(folder_path, "video_descriptions.txt")
     
     if isVoiceover:

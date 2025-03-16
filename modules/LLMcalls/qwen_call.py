@@ -20,9 +20,18 @@ def load_api_configs():
         logger.error(f"Failed to load API config file: {str(e)}")
         raise
 
-def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str):
+def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str, timeout: int = 100):
     """
     Analyze two results and return the analysis result
+    
+    Args:
+        meta_data: Metadata
+        duration: Duration of the video
+        transcript: Transcription text
+        key_frame_analyzing_results: Key frame analysis results
+        video_analyzing_results: Video analysis results
+        prompt: Prompt template filename
+        timeout: Request timeout in seconds (default: 100)
     """
     current_dir = Path(__file__).resolve().parent
     project_root = current_dir.parent.parent
@@ -49,23 +58,33 @@ def unify_results(meta_data: str, duration: str, transcript: str, key_frame_anal
     # Create client and call API
     client = OpenAI(
         api_key=config["api_key"],
-        base_url=config["base_url"]
+        base_url=config["base_url"],
+        timeout=timeout  # Set timeout for API calls
     )
 
     model = config["models"].get("reasoner")
     if not model:
         raise ValueError("Reasoner model configuration not found")
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": question},
-        ],
-        stream=False
-    )
-    
-    result = response.choices[0].message.content
-    logger.info("Qwen response:")
-    logger.info(f"{result}")
-    return result
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": question},
+            ],
+            stream=False,
+            timeout=timeout  # Set timeout for this specific request
+        )
+        
+        result = response.choices[0].message.content
+        logger.info("Qwen response:")
+        logger.info(f"{result}")
+        return result
+    except Exception as e:
+        if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            logger.error(f"Qwen API request timed out after {timeout}s")
+            raise TimeoutError(f"Qwen API request timed out after {timeout}s")
+        else:
+            logger.error(f"Error calling Qwen API: {str(e)}")
+            raise

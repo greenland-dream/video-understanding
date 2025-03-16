@@ -8,11 +8,18 @@ janus:
 
 # Owl3 model config
 owl3:
-  python_path: "/opt/anaconda3/envs/owl3/bin/python"
+  python_path: "put your owl3 python path here"
   prompt_file: "video_understanding_movement_en.md"
   model: "mPLUG/mPLUG-Owl3-2B-241014"
   max_tokens: 4096
   max_frames: 16
+  device: "mps"
+
+# Query system model config
+query_system:
+  model: "mlx-community/Qwen2.5-7B-Instruct-1M-3bit"
+  max_tokens: 2048
+  temperature: 0.0
   device: "mps"
 
 # lower number means higher priority
