@@ -89,6 +89,52 @@ Web界面功能包括：
 
 ![视频搜索引擎](docs/webUI.png)
 
+### **5.1 CLIP相似性生成**
+此功能通过检测场景/片段并为每个片段查找相似视频来分析视频：
+
+```bash
+python tools/clip_similarity_finder.py --video_path /path/to/your/video.mp4 --output_dir /path/to/output
+```
+
+主要功能：
+- 自动检测视频中的场景变化
+- 分析每个片段的音频、关键帧和动作
+- 使用多线程为每个片段查找相似视频
+- 确保每个相似视频在所有片段中只使用一次
+- 将结果组织在清晰的目录结构中
+- 支持背景信息来指导视频选择
+
+高级选项：
+```bash
+python tools/clip_similarity_finder.py --video_path /path/to/video.mp4 --output_dir /path/to/output --threshold 30 --min_duration 1.0 --max_threads 8 --background "需要欧洲城市风格的视频，色调偏暖"
+```
+
+### **5.2 文本相似性查找**
+此功能查找与文本描述或指令匹配的视频：
+
+```bash
+python tools/text_similarity_finder.py --text "你的文本或指令" --output_dir /path/to/output
+```
+
+主要功能：
+- 将输入文本分割成有意义的片段
+- 为每个片段生成视觉描述
+- 为每个描述查找相似视频
+- 可以将简短指令扩展为完整视频脚本
+- 支持背景信息来指导视频选择
+
+高级选项：
+```bash
+# 使用文本文件作为输入
+python tools/text_similarity_finder.py --text_file /path/to/text_file.txt --output_dir /path/to/output
+
+# 扩展指令并设置目标时长
+python tools/text_similarity_finder.py --text "创建一个关于春天的短视频" --is_instruction --target_duration 30 --output_dir /path/to/output
+
+# 带有背景信息
+python tools/text_similarity_finder.py --text "樱花盛开的季节" --background "需要欧洲城市风格的视频，色调偏暖" --output_dir /path/to/output
+```
+
 
 ## 系统环境说明 
 
@@ -212,6 +258,8 @@ python app.py
   - macOS/Linux: `"/Users/yourname/Videos"`
 - 数据库文件将存储在 `db/data/` 目录下，包括SQLite数据库和ChromaDB向量数据库。
 
+
+
 ---
 
 ## 项目结构
@@ -226,6 +274,9 @@ python app.py
 ├── modules/           # 核心模块 
 │   ├── video_query/   # 视频查询模块
 │   └── ...
+├── tools/             # 工具程序
+│   ├── clip_similarity_finder.py  # 为视频中的每个片段查找相似视频
+│   └── text_similarity_finder.py  # 查找与文本描述匹配的视频
 ├── utils/             # 工具函数 
 ├── web/               # Web界面
 │   ├── app.py         # Flask应用

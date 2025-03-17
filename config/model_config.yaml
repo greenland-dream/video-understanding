@@ -8,7 +8,7 @@ janus:
 
 # Owl3 model config
 owl3:
-  python_path: "put your owl3 python path here"
+  python_path: "~/anaconda3/envs/owl3/bin/python"
   prompt_file: "video_understanding_movement_en.md"
   model: "mPLUG/mPLUG-Owl3-2B-241014"
   max_tokens: 4096

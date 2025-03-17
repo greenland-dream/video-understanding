@@ -27,7 +27,7 @@ def main():
     
     # put your folder path here
     folder_paths = [
-        # "/Volumes/SSD_4T/videos"
+        "/Volumes/SSD_4T/videos"
     ]
     
     for folder_path in folder_paths:

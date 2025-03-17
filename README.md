@@ -88,6 +88,52 @@ Web interface features include:
 
 ![视频搜索引擎](docs/webUI.png)
 
+### **5.1 CLIP Similarity Generation**
+This feature analyzes a video by detecting scenes/clips and finding similar videos for each clip:
+
+```bash
+python tools/clip_similarity_finder.py --video_path /path/to/your/video.mp4 --output_dir /path/to/output
+```
+
+Key capabilities:
+- Automatically detects scene changes in videos
+- Analyzes audio, key frames, and motion in each clip
+- Finds similar videos for each clip using multi-threading
+- Ensures each similar video is only used once across all clips
+- Organizes results in a clear directory structure
+- Supports background information to guide video selection
+
+Advanced options:
+```bash
+python tools/clip_similarity_finder.py --video_path /path/to/video.mp4 --output_dir /path/to/output --threshold 30 --min_duration 1.0 --max_threads 8 --background "Need European city style videos with warm tones"
+```
+
+### **5.2 Text Similarity Finder**
+This feature finds videos that match text descriptions or instructions:
+
+```bash
+python tools/text_similarity_finder.py --text "Your text or instructions here" --output_dir /path/to/output
+```
+
+Key capabilities:
+- Splits input text into meaningful segments
+- Generates visual descriptions for each segment
+- Finds similar videos for each description
+- Can expand brief instructions into full video scripts
+- Supports background information to guide video selection
+
+Advanced options:
+```bash
+# Using a text file as input
+python tools/text_similarity_finder.py --text_file /path/to/text_file.txt --output_dir /path/to/output
+
+# Expanding an instruction with target duration
+python tools/text_similarity_finder.py --text "Create a short video about spring" --is_instruction --target_duration 30 --output_dir /path/to/output
+
+# With background information
+python tools/text_similarity_finder.py --text "Cherry blossoms in bloom" --background "Need European city style videos with warm tones" --output_dir /path/to/output
+```
+
 ## System Environment
 
 Because *deepseek Janus* and *mPLUG-owl3* have some conflicting dependencies, this project is developed mainly under Janus's environment, with some additional packages installed. Meanwhile, *mPLUG-owl3* dependencies are installed in a **separate virtual environment** and invoked via `subprocess`.
@@ -223,6 +269,9 @@ Then visit http://127.0.0.1:5000 in your browser to use the web interface.
 ├── modules/           # Core modules
 │   ├── video_query/   # Video query module
 │   └── ...
+├── tools/             # Utility tools
+│   ├── clip_similarity_finder.py  # Find similar videos for each clip in a video
+│   └── text_similarity_finder.py  # Find videos matching text descriptions
 ├── utils/             # Utility functions
 ├── web/               # Web interface
 │   ├── app.py         # Flask application
