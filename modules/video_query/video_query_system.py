@@ -15,7 +15,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 # from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from pydantic import BaseModel, Field, field_validator
 # 导入本地模型接口
-from modules.call_qwenQwQ import generate_response
+# from modules.call_qwenQwQ import generate_response
 from modules.call_rerank_api import call_rerank_api
 from modules.call_parse_api import call_parse_api
 
@@ -166,17 +166,11 @@ class VideoQuerySystem:
             max_tokens = self.model_config.get("max_tokens", 2048)
             temperature = self.model_config.get("temperature", 0.0)
             
-            response = generate_response(
-                model_path=model_path,
-                prompt=prompt,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                verbose=True
-            )
-            
-            return response
+            # Local model functionality has been removed
+            logger.warning("本地模型功能已被移除，请使用远程 API")
+            return ""
         except Exception as e:
-            print(f"调用本地模型出错: {e}")
+            logger.error(f"调用本地模型出错: {e}")
             return ""
     
     def parse_query(self, query: str, use_api: bool = True) -> VideoQueryIntent:

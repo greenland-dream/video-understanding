@@ -55,9 +55,9 @@ def embed_metadata_with_exiftool(input_video, transcript, raw_tags):
         # Get video duration
         duration = get_video_duration(input_video)
         
-        # Write XMP-dc:Description field
-        if "description" in tags:
-            description_text = tags['description']
+        # Write XMP-dc:描述 field
+        if "描述" in tags:
+            description_text = tags['描述']
             # Add duration info
             description_text = f"Duration: {duration:.1f}s | " + description_text
             if "是否有旁白" in tags and tags["是否有旁白"] == "有旁白":
@@ -105,6 +105,14 @@ def embed_metadata_with_exiftool(input_video, transcript, raw_tags):
             if tags['是否有旁白'] == "有旁白":
                 hierarchical_keywords.append(f"Voiceover|{tags['旁白总结']}")
                 flat_keywords.append(tags["旁白总结"])
+                
+        if "镜头移动" in tags:
+            hierarchical_keywords.append(f"镜头移动|{tags['镜头移动']}")
+            flat_keywords.append(tags["镜头移动"])
+            
+        if "拍摄角度" in tags:
+            hierarchical_keywords.append(f"拍摄角度|{tags['拍摄角度']}")
+            flat_keywords.append(tags["拍摄角度"])
 
         # Add orientation tags
         orientation = get_video_orientation(input_video)
@@ -165,7 +173,7 @@ def write_description(video, transcript, hierarchical_keywords, raw_tags, isVoic
         duration: Video duration in seconds
     """
     tags = transform_tags(raw_tags)
-    description = tags.get("description", "")
+    description = tags.get("描述", "")
     
     # Get video filename without path
     video_name = os.path.basename(video)

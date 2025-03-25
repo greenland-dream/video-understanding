@@ -19,7 +19,7 @@ def load_api_configs():
         logger.error(f"Failed to load API config file: {str(e)}")
         raise
 
-def unify_results(meta_data: str, duration: str, transcript: str, key_frame_analyzing_results: str, video_analyzing_results: str, prompt: str, timeout: int = 100):
+def unify_results(meta_data: str, duration: str, transcript: str, video_analyzing_results: str, prompt: str, timeout: int = 100):
     """
     Analyze two results and return the analysis result
     
@@ -27,7 +27,6 @@ def unify_results(meta_data: str, duration: str, transcript: str, key_frame_anal
         meta_data: Metadata
         duration: Duration of the video
         transcript: Transcription text
-        key_frame_analyzing_results: Key frame analysis results
         video_analyzing_results: Video analysis results
         prompt: Prompt template filename
         timeout: Request timeout in seconds (default: 100)
@@ -42,7 +41,6 @@ def unify_results(meta_data: str, duration: str, transcript: str, key_frame_anal
     question = question.replace("{{meta_data}}", str(meta_data))
     question = question.replace("{{duration}}", str(duration))
     question = question.replace("{{transcript}}", str(transcript))
-    question = question.replace("{{key_frame_analyzing_results}}", str(key_frame_analyzing_results))
     question = question.replace("{{video_analyzing_results}}", str(video_analyzing_results))
     
     logger.info("Prompt sent to SiliconFlow:")

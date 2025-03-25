@@ -40,14 +40,45 @@ document.addEventListener('DOMContentLoaded', function() {
         'time_of_day': '拍摄时间段',
         'sql_id': 'ID',
         'processed_at': '处理时间',
-        'video_path': '视频路径'
+        'video_path': '视频路径',
+        'camera_angle': '摄像机角度',
+        'camera_movement': '摄像机运动',
+        'camera_shot_type': '镜头类型',
+        'star_rating': '评分'
     };
     
     // 需要过滤的字段
-    const filterFields = ['location', 'orientation', 'people', 'scene', 'time_of_day', 'color'];
+    const filterFields = ['location', 'orientation', 'people', 'scene', 'time_of_day', 'color', 'camera_angle', 'camera_movement', 'camera_shot_type'];
 
     // 初始化时清空搜索结果容器
     searchResults.innerHTML = '';
+    
+    // 过滤器切换按钮事件
+    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    const filterToggleContainer = document.getElementById('filterToggleContainer');
+    
+    if (filterToggleBtn) {
+        filterToggleBtn.addEventListener('click', function() {
+            // 切换过滤器容器的显示状态
+            filterContainer.classList.toggle('show');
+            // 更新按钮的活动状态
+            this.classList.toggle('active');
+            
+            // 更新箭头图标
+            const chevronIcon = this.querySelector('.bi-chevron-down, .bi-chevron-up');
+            if (chevronIcon) {
+                if (filterContainer.classList.contains('show')) {
+                    // 如果过滤器已展开，显示向上箭头
+                    chevronIcon.classList.remove('bi-chevron-down');
+                    chevronIcon.classList.add('bi-chevron-up');
+                } else {
+                    // 如果过滤器已收起，显示向下箭头
+                    chevronIcon.classList.remove('bi-chevron-up');
+                    chevronIcon.classList.add('bi-chevron-down');
+                }
+            }
+        });
+    }
     
     // 检查是否已经搜索过
     const hasSearched = !filterContainer.classList.contains('d-none') ||
@@ -71,7 +102,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         searchButton.disabled = true;
         searchResults.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+        filterContainer.classList.remove('show'); // 确保过滤器是隐藏的
         filterContainer.classList.add('d-none');
+        filterToggleContainer.classList.add('d-none'); // 隐藏过滤器切换按钮
         exportContainer.classList.add('d-none');
         selectedVideos.clear();
         updateSelectedCount();
@@ -126,7 +159,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // 生成过滤器
             generateFilters(allSearchResults);
             
-            // 显示导出面板
+            // 显示过滤器开关按钮，但确保它紧贴搜索框底部
+            filterToggleContainer.classList.remove('d-none');
+            
+            // 显示导出面板，确保它与过滤切换按钮之间没有多余间距
             exportContainer.classList.remove('d-none');
             
             // 显示搜索结果
@@ -143,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 如果没有结果，不显示过滤器
         if (results.length === 0) {
             filterContainer.classList.add('d-none');
+            filterToggleContainer.classList.add('d-none'); // 隐藏过滤器切换按钮
             return;
         }
         
@@ -173,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         filterGroupsContainer.appendChild(mainFiltersContainer);
         
         // 主要过滤器字段（一行显示）
-        const mainFilterFields = ['color', 'time_of_day', 'orientation', 'people', 'scene'];
+        const mainFilterFields = ['color', 'time_of_day', 'orientation', 'people', 'scene', 'camera_angle', 'camera_movement', 'camera_shot_type'];
         
         // 为主要过滤字段创建过滤组
         mainFilterFields.forEach(field => {
@@ -248,46 +285,54 @@ document.addEventListener('DOMContentLoaded', function() {
             // 获取排序后的位置值
             const sortedLocations = Array.from(filterValues['location']).sort();
             
-            // 直接添加位置按钮，不使用特殊容器
-            sortedLocations.forEach(value => {
+            // 添加每个位置的按钮
+            sortedLocations.forEach(location => {
                 const button = document.createElement('button');
                 button.className = 'btn btn-sm btn-outline-primary';
-                button.textContent = value;
-                button.dataset.value = value;
+                button.textContent = location;
+                button.dataset.value = location;
                 locationButtons.appendChild(button);
             });
             
             filterGroupsContainer.appendChild(locationGroup);
         }
         
-        // 添加过滤器点击事件
-        filterContainer.querySelectorAll('.filter-buttons').forEach(buttonGroup => {
-            buttonGroup.addEventListener('click', function(e) {
-                if (e.target.tagName === 'BUTTON') {
-                    const field = this.dataset.field;
-                    const value = e.target.dataset.value;
-                    
-                    // 更新按钮状态
-                    this.querySelectorAll('button').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    e.target.classList.add('active');
-                    
-                    // 更新过滤条件
-                    if (value === 'all') {
-                        delete activeFilters[field];
-                    } else {
-                        activeFilters[field] = value;
-                    }
-                    
-                    // 应用过滤
-                    applyFilters();
-                }
-            });
-        });
-        
-        // 显示过滤器
+        // 移除d-none类，但保持隐藏状态（通过CSS的max-height和opacity控制）
         filterContainer.classList.remove('d-none');
+        // 初始状态不展开
+        filterContainer.classList.remove('show');
+        
+        // 为所有过滤按钮添加点击事件
+        document.querySelectorAll('.filter-buttons button').forEach(button => {
+            button.addEventListener('click', handleFilterClick);
+        });
+    }
+    
+    // 过滤器按钮点击处理函数
+    function handleFilterClick(e) {
+        if (e.target.tagName === 'BUTTON') {
+            const buttonGroup = e.target.closest('.filter-buttons');
+            if (!buttonGroup) return;
+            
+            const field = buttonGroup.dataset.field;
+            const value = e.target.dataset.value;
+            
+            // 更新按钮状态
+            buttonGroup.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            
+            // 更新过滤条件
+            if (value === 'all') {
+                delete activeFilters[field];
+            } else {
+                activeFilters[field] = value;
+            }
+            
+            // 应用过滤
+            applyFilters();
+        }
     }
     
     // 应用过滤条件
@@ -440,6 +485,27 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
+    // Generate star rating display
+    function generateStarRating(rating, videoId) {
+        // Ensure rating is between 0 and 5
+        rating = Math.min(5, Math.max(0, parseInt(rating) || 0));
+        
+        // Generate HTML for stars
+        let starsHTML = '';
+        
+        for (let i = 1; i <= 5; i++) {
+            if (i <= rating) {
+                // Full star
+                starsHTML += '<i class="bi bi-star-fill" data-rating="' + i + '"></i>';
+            } else {
+                // Empty star
+                starsHTML += '<i class="bi bi-star" data-rating="' + i + '"></i>';
+            }
+        }
+        
+        return `<div class="rating-stars" data-video-id="${videoId}">${starsHTML}</div>`;
+    }
+
     // Display search results
     function displaySearchResults(results) {
         searchResults.innerHTML = '';
@@ -478,7 +544,8 @@ document.addEventListener('DOMContentLoaded', function() {
                            value.toString().trim() !== '' && 
                            key !== 'video_path' && 
                            key !== 'processed_at' &&
-                           key !== 'sql_id';
+                           key !== 'sql_id' &&
+                           key !== 'document_type';
                 })
                 .map(([key, value]) => {
                     // 翻译字段名
@@ -546,8 +613,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             resultElement.innerHTML = `
                 <input type="checkbox" class="video-select-checkbox" ${selectedVideos.has(result.video_id) ? 'checked' : ''}>
-                <div class="video-thumbnail-container">
-                    <img src="${thumbnailSrc}" alt="Video thumbnail" class="video-thumbnail">
+                <div class="video-thumbnail-wrapper">
+                    <div class="video-thumbnail-container">
+                        <img src="${thumbnailSrc}" alt="Video thumbnail" class="video-thumbnail">
+                    </div>
+                    <div class="rating-box">
+                        ${generateStarRating(result.metadata.star_rating || 0, result.video_id)}
+                    </div>
                 </div>
                 <div class="video-info">
                     <div class="video-content">
@@ -585,6 +657,18 @@ document.addEventListener('DOMContentLoaded', function() {
             thumbnail.addEventListener('click', () => {
                 playVideo(result.video_path, result.video_id);
             });
+            
+            // Add click event for rating stars
+            const ratingStars = resultElement.querySelector('.rating-stars');
+            if (ratingStars) {
+                ratingStars.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'I' && e.target.dataset.rating) {
+                        const rating = parseInt(e.target.dataset.rating);
+                        const videoId = this.dataset.videoId;
+                        updateVideoRating(result.video_path, videoId, rating);
+                    }
+                });
+            }
             
             searchResults.appendChild(resultElement);
         });
@@ -741,6 +825,54 @@ document.addEventListener('DOMContentLoaded', function() {
             // 恢复按钮状态
             exportSelectedBtn.disabled = selectedVideos.size === 0;
             updateSelectedCount();
+        }
+    }
+
+    // Update video rating
+    async function updateVideoRating(videoPath, videoId, rating) {
+        try {
+            const response = await fetch('/update_rating', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    video_path: videoPath,
+                    rating: rating
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update the UI to reflect the new rating
+                const ratingElement = document.querySelector(`.rating-stars[data-video-id="${videoId}"]`);
+                if (ratingElement) {
+                    ratingElement.innerHTML = '';
+                    for (let i = 1; i <= 5; i++) {
+                        const star = document.createElement('i');
+                        star.classList.add('bi');
+                        star.classList.add(i <= rating ? 'bi-star-fill' : 'bi-star');
+                        star.dataset.rating = i;
+                        ratingElement.appendChild(star);
+                    }
+                }
+                
+                // Update the rating in our stored search results
+                for (let i = 0; i < allSearchResults.length; i++) {
+                    if (allSearchResults[i].video_id === videoId) {
+                        if (!allSearchResults[i].metadata) {
+                            allSearchResults[i].metadata = {};
+                        }
+                        allSearchResults[i].metadata.star_rating = rating;
+                        break;
+                    }
+                }
+            } else {
+                console.error('Failed to update rating:', data.error);
+            }
+        } catch (error) {
+            console.error('Error updating rating:', error);
         }
     }
 

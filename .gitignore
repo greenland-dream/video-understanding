@@ -4,6 +4,9 @@ modules/models/
 models/
 logs/
 db/data
+db/data_qwen2.5_7b_4bit
+db/data_origin
+db/.ipynb_checkpoints
 __pycache__/
 *.pyc
 .DS_Store

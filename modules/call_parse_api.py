@@ -65,7 +65,6 @@ def call_parse_api(provider, query, prompt_file="query_parser.md", format_instru
             meta_data="",
             duration="",
             transcript="",
-            key_frame_analyzing_results="",
             video_analyzing_results="",
             prompt=temp_prompt_file,
             max_retries=max_retries,
@@ -125,7 +124,7 @@ def get_sorted_providers():
     ]
     return sorted(available_providers, key=lambda x: x.current_priority)
 
-def route_providers(provider, meta_data, duration, transcript, key_frame_analyzing_results, video_analyzing_results, prompt, max_retries=3, retry_delay=2, timeout=100):
+def route_providers(provider, meta_data, duration, transcript, video_analyzing_results, prompt, max_retries=3, retry_delay=2, timeout=100):
     """
     Try different API providers to call LLM service with dynamic priority
     
@@ -134,7 +133,6 @@ def route_providers(provider, meta_data, duration, transcript, key_frame_analyzi
         meta_data: Metadata
         duration: Duration of the video
         transcript: Transcription text
-        key_frame_analyzing_results: Key frame analysis results
         video_analyzing_results: Video analysis results
         prompt: Prompt template filename
         max_retries: Maximum retry attempts
@@ -179,7 +177,6 @@ def route_providers(provider, meta_data, duration, transcript, key_frame_analyzi
                         meta_data,
                         duration,
                         transcript,
-                        key_frame_analyzing_results,
                         video_analyzing_results,
                         prompt,
                         timeout=timeout  # Pass timeout to provider module
@@ -191,7 +188,6 @@ def route_providers(provider, meta_data, duration, transcript, key_frame_analyzi
                         meta_data,
                         duration,
                         transcript,
-                        key_frame_analyzing_results,
                         video_analyzing_results,
                         prompt
                     )

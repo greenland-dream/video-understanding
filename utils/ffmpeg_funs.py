@@ -5,7 +5,7 @@ from typing import Tuple, Literal
 
 logger = setup_logger(__name__)
 
-def _get_video_duration(video_file):
+def get_video_duration(video_file):
     """
     Get video duration in seconds using ffprobe
     """
@@ -32,7 +32,7 @@ def extract_representative_frame(video_file, output_image):
       3. If scene detection fails, extract middle frame
     """
     logger.info("Attempting to extract I-frame...")
-    duration = _get_video_duration(video_file)
+    duration = get_video_duration(video_file)
     command_i = [
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
         "-i", video_file,

@@ -143,8 +143,8 @@ body {
 /* 搜索容器 - 搜索后 */
 .search-container.search-active {
     min-height: auto;
-    padding: 20px 30px;
-    margin: 0 auto 15px auto;
+    padding: 20px 30px 10px 30px;
+    margin: 0 auto 0px auto;
     width: 90%;
     max-width: 1000px;
     display: flex;
@@ -159,7 +159,7 @@ body {
     position: relative;
     top: 0;
     margin-top: 0;
-    margin-bottom: 20px;
+    margin-bottom: 0px;
 }
 
 /* 搜索后标题样式 */
@@ -281,11 +281,51 @@ body {
     background-color: rgba(255, 255, 255, 0.3); /* 70%透明 */
     backdrop-filter: blur(10px);
     border-radius: 15px;
-    padding: 20px;
-    margin-top: 15px;
+    padding: 0;
+    margin-top: 10px;
+    margin-bottom: 10px;
     max-width: 1000px;
     width: 90%;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease-in-out;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+}
+
+#filterContainer.show {
+    max-height: 1500px; /* 足够大的高度以容纳所有过滤选项 */
+    padding: 20px;
+    opacity: 1;
+}
+
+/* 过滤器切换按钮 */
+#filterToggleContainer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+#filterToggleBtn {
+    transition: all 0.2s ease;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#filterToggleBtn:hover {
+    background-color: #e9ecef;
+}
+
+#filterToggleBtn .bi-chevron-down,
+#filterToggleBtn .bi-chevron-up {
+    transition: transform 0.3s ease;
+}
+
+#filterToggleBtn.active .bi-chevron-down {
+    transform: rotate(180deg);
 }
 
 .filter-groups {
@@ -343,7 +383,7 @@ body {
 .video-result {
     display: grid;
     grid-template-columns: auto 180px 1fr;
-    gap: 20px;
+    gap: 15px;
     padding: 15px;
     border: 1px solid #e9ecef;
     border-radius: 8px;
@@ -369,12 +409,20 @@ body {
     cursor: pointer;
 }
 
+/* 缩略图和评分的包装容器 */
+.video-thumbnail-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 180px;
+}
+
 .video-thumbnail-container {
     width: 180px;
     height: 120px;
     overflow: hidden;
     border-radius: 6px;
     cursor: pointer;
+    margin-bottom: 8px;
 }
 
 .video-thumbnail {
@@ -443,10 +491,10 @@ body {
 
 /* 导出面板样式 */
 .export-panel {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
     padding: 15px;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .export-actions {
@@ -455,7 +503,9 @@ body {
 }
 
 #exportContainer {
-    margin-bottom: 15px;
+    padding: 0;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 /* 响应式调整 */
@@ -484,10 +534,20 @@ body {
         grid-template-columns: 1fr;
     }
     
+    .video-thumbnail-wrapper {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+    
     .video-thumbnail-container {
         width: 100%;
         height: auto;
         aspect-ratio: 16/9;
+    }
+    
+    .rating-box {
+        width: 100%;
+        max-width: 100%;
     }
     
     .main-filters {
@@ -714,7 +774,8 @@ body {
     backdrop-filter: blur(10px);
     border-radius: 15px;
     padding: 20px;
-    margin-top: 15px;
+    margin-top: 10px;
+    margin-bottom: 10px;
     max-width: 1000px;
     width: 90%;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
@@ -724,8 +785,9 @@ body {
     background-color: rgba(255, 255, 255, 0.3); /* 70%透明 */
     backdrop-filter: blur(10px);
     border-radius: 15px;
-    padding: 20px;
-    margin-top: 15px;
+    padding: 0;
+    margin-top: 10px;
+    margin-bottom: 10px;
     max-width: 1000px;
     width: 90%;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
@@ -768,7 +830,8 @@ body {
     backdrop-filter: blur(10px);
     border-radius: 15px;
     padding: 20px;
-    margin-top: 15px;
+    margin-top: 10px;
+    margin-bottom: 10px;
     max-width: 1000px;
     width: 90%;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
@@ -822,4 +885,60 @@ body {
 .page-container.search-results-visible .video-stats {
     color: rgba(0, 0, 0, 0.6);
     background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* 视频项内部的评分框 */
+.rating-box {
+    width: 100%;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    margin-top: 2px;
+    padding-right: 10px;
+}
+
+/* Star Rating Styles */
+.rating-stars {
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.rating-stars i {
+    color: #d5d9dd;
+    font-size: 14px;
+    margin: 0 3px;
+    transition: all 0.2s ease;
+}
+
+.rating-stars i:hover {
+    transform: scale(1.15);
+}
+
+.rating-stars i.bi-star-fill {
+    color: #ffc107; /* yellow color for filled stars */
+}
+
+.rating-stars:hover i.bi-star {
+    color: #e6e6e6; /* lighter gray when hovering over the rating */
+}
+
+.rating-stars:hover i.bi-star-fill {
+    color: #ffc107; /* keep filled stars yellow */
+}
+
+/* Hover effect - highlight stars on hover */
+.rating-stars i:hover ~ i {
+    color: #d5d9dd; /* reset color for stars after the hovered one */
+}
+
+.rating-stars:hover i {
+    color: #ffc107; /* make all stars yellow on hover */
+}
+
+.rating-stars i:hover ~ i {
+    color: #d5d9dd; /* reset stars after the hovered one */
 } 

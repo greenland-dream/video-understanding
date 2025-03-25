@@ -5,7 +5,7 @@ import chromadb
 import torch
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime, Text, Float, Date
+from sqlalchemy import create_engine, Column, String, Boolean, DateTime, Text, Float, Date, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from utils.ffmpeg_funs import get_video_orientation, get_video_duration
@@ -38,6 +38,10 @@ class ProcessedVideo(Base):
     location = Column(String(500))     # Keep as string since it's descriptive text
     orientation = Column(String(50))   # Keep as string since it's an enum-like value
     duration = Column(Float)           # Change to Float for numeric duration in seconds
+    camera_movement = Column(String(100))  # Camera movement type (static, panning, etc.)
+    camera_angle = Column(String(100))     # Camera angle (eye level, aerial, etc.)
+    camera_shot_type = Column(String(100))  # Camera shot type (close-up, medium shot, wide shot, etc.)
+    star_rating = Column(Integer, default=0)  # Star rating from 0 to 5
     
     def __repr__(self):
         return f"<ProcessedVideo(id='{self.id}', file_path='{self.file_path}')>"
@@ -157,7 +161,7 @@ class VideoDatabase:
                 try:
                     analysis_dict = json.loads(analysis_result)
                 except json.JSONDecodeError:
-                    analysis_dict = {"description": analysis_result}
+                    analysis_dict = {"描述": analysis_result}
             else:
                 analysis_dict = analysis_result or {}
             
@@ -167,6 +171,9 @@ class VideoDatabase:
                 "color": analysis_dict.get("颜色", ""),
                 "scene": analysis_dict.get("拍摄场景", ""),
                 "people": analysis_dict.get("人物", ""),
+                "camera_movement": analysis_dict.get("镜头移动", ""),
+                "camera_angle": analysis_dict.get("拍摄角度", ""),
+                "camera_shot_type": analysis_dict.get("镜头类型", "")
             }
             
             # Parse date string to DateTime object with enhanced format support
@@ -235,7 +242,7 @@ class VideoDatabase:
                     file_hash=file_hash,
                     success=success,
                     analysis_json=json.dumps(analysis_result) if analysis_result else None,
-                    description=analysis_dict.get("description", ""),
+                    description=analysis_dict.get("描述", ""),
                     transcript=transcript,
                     meta_data=analysis_dict.get("meta_data", ""),
                     time_of_day=metadata["time_of_day"],
@@ -245,7 +252,11 @@ class VideoDatabase:
                     people=metadata["people"],
                     location=location,
                     orientation=orientation_map.get(orientation, ""),
-                    duration=float(duration) if duration else None
+                    duration=float(duration) if duration else None,
+                    camera_movement=metadata["camera_movement"],
+                    camera_angle=metadata["camera_angle"],
+                    camera_shot_type=metadata["camera_shot_type"],
+                    star_rating=analysis_dict.get("star_rating", 0)
                 )
                 session.add(video)
                 session.commit()
@@ -277,14 +288,14 @@ class VideoDatabase:
                 try:
                     analysis_dict = json.loads(analysis_result)
                 except json.JSONDecodeError:
-                    analysis_dict = {"description": analysis_result}
+                    analysis_dict = {"描述": analysis_result}
             else:
                 analysis_dict = analysis_result
             
             # Extract description for vector embedding
             description = meta_data or ""
-            if "description" in analysis_dict:
-                description += " " + analysis_dict["description"]
+            if "描述" in analysis_dict:
+                description += " " + analysis_dict["描述"]
             
             # Create base metadata with all structured fields
             metadata = {
@@ -299,7 +310,10 @@ class VideoDatabase:
                 "颜色": "color",
                 "拍摄日期": "date",
                 "拍摄场景": "scene",
-                "人物": "people"
+                "人物": "people",
+                "镜头移动": "camera_movement",
+                "拍摄角度": "camera_angle",
+                "镜头类型": "camera_shot_type"
             }
             
             # Convert Chinese keys to English and add to metadata

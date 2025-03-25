@@ -6,23 +6,20 @@
 
 **AI Scientist × Travel Blogger** — an intelligent tool that addresses two major challenges: **managing large amounts of footage** and **producing creative content**. It's now open-source to assist every content creator!
 
-This repository discloses the core code we use to manage large volumes of travel videos. It primarily achieves **video content understanding**, **automatic tagging**, and generating a concise **description for each video**. The project integrates multimodal models (including *deepseek Janus*, *mPLUG-owl3*, and *sensevoice*) and leverages large language models (either *deepseek* or *Qwen*) to produce more accurate descriptions and tags. It can then work together with tools like *Adobe Bridge* for video tagging, content search, and narration retrieval. Additionally, you can generate script outlines for platforms such as Rednote or Tiktok based on the descriptions.
+This repository discloses the core code we use to manage large volumes of travel videos. It primarily achieves **video content understanding**, **automatic tagging**, and generating a concise **description for each video**. The project integrates multimodal models (utilizing *Google Gemma3* and *sensevoice*) and leverages large language models to produce accurate descriptions and tags. It can then work together with tools like *Adobe Bridge* for video tagging, content search, and narration retrieval. Additionally, you can generate script outlines for platforms such as Rednote or Tiktok based on the descriptions.
 
 ---
 
 ## Features
 
 - **Video Scene Understanding (Local Deployment)**  
-  Analyze keyframes (I-frames) using *deepseek Janus* to extract static information such as scene context.
-
-- **Full Video Understanding (Local Deployment)**  
-  Use *mPLUG-owl3* to analyze the entire video's dynamic information, including people, objects, and scenes.
+  Use *Google Gemma3* to analyze the entire video's dynamic information, including people, objects, and scenes.
 
 - **Audio Analysis (Local Deployment)**  
   Employ *sensevoice* for audio analysis and extracting dialogue, providing textual information for content summarization and tag generation.
 
 - **Tag and Video Description Generation (via API)**  
-  Based on multimodal information, call a large language model (*deepseek*/ *Qwen*) to generate tags, summaries, or descriptions.
+  Based on multimodal information, call a large language model to generate tags, summaries, or descriptions.
 
 - **Database Storage and Retrieval (Local Deployment)**  
   Use structured database (SQLite) and vector database (ChromaDB) to store video analysis results for efficient retrieval.
@@ -97,7 +94,7 @@ python tools/clip_similarity_finder.py --video_path /path/to/your/video.mp4 --ou
 
 Key capabilities:
 - Automatically detects scene changes in videos
-- Analyzes audio, key frames, and motion in each clip
+- Analyzes audio, video frames, and motion in each clip
 - Finds similar videos for each clip using multi-threading
 - Ensures each similar video is only used once across all clips
 - Organizes results in a clear directory structure
@@ -136,16 +133,15 @@ python tools/text_similarity_finder.py --text "Cherry blossoms in bloom" --backg
 
 ## System Environment
 
-Because *deepseek Janus* and *mPLUG-owl3* have some conflicting dependencies, this project is developed mainly under Janus's environment, with some additional packages installed. Meanwhile, *mPLUG-owl3* dependencies are installed in a **separate virtual environment** and invoked via `subprocess`.
+The system now uses a simplified architecture with a single model environment based on Google Gemma3 for video understanding.
 
 - **Development & Testing Environment**  
   - Mac mini M4 Pro, 24GB Unified Memory  
   - Tested only on this configuration. If you need to run on a CUDA environment or a pure CPU environment, adjust parameters and paths in the code accordingly.
   
 - **Deep Learning Dependencies**  
-  - deepseek Janus
-  - mPLUG-owl3
-  - sensevoice
+  - Google Gemma3 for video understanding
+  - sensevoice for audio transcription
   - Other dependencies listed in `requirements.txt`
 
 - **Database Dependencies**
@@ -160,46 +156,20 @@ Because *deepseek Janus* and *mPLUG-owl3* have some conflicting dependencies, th
 ### 1. Clone the Repository
 
 ```bash
-git clone --recursive https://github.com/greenland-dream/video-understanding.git
+git clone https://github.com/greenland-dream/video-understanding.git
 cd video-understanding
 ```
 
 ### 2. Install Dependencies
 
-This project relies on multiple model environments. Please follow the steps below:
-
-1. **Install Janus Dependencies**  
-   Navigate to the `modules/Janus` directory and install Janus-related dependencies:
-   ```bash
-   cd modules/Janus
-   pip install -e .
-   cd ../..
-   ```
-
-2. **Install Main Project Dependencies**  
-   In the main directory, install the dependencies listed in `requirements.txt`:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Install mPLUG-owl3 Dependencies**  
-   Go to the `modules/mPLUG-Owl/mPLUG-Owl3` directory and install the `mPLUG-owl3` dependencies **in a separate virtual environment**:
-   ```bash
-   conda create -n owl3 python=3.9
-   conda activate owl3
-   cd modules/mPLUG-Owl/mPLUG-Owl3
-   pip install -r requirements.txt
-   cd ../../..
-   conda deactivate
-   ```
-
-4. **Running the Project**  
-   **The entire project is run under the Janus environment**. In other words, use the environment where Janus is installed to execute the main code, while `mPLUG-owl3` tasks will be invoked as a subprocess using `owl3`.
+```bash
+pip install -r requirements.txt
+```
 
 ### 3. Configure Models & Environment
 
-- Modify `config/model_config.yaml` to provide the path to your `mPLUG-owl3` virtual environment.
-- Copy `config/api_configs.json.example` to `config/api_configs.json` and fill in the necessary API keys. Currently supports *deepseek*, *siliconflow*, *azure*, *github*, *openrouter*, *qwen* APIs. You can configure the priority of each API provider in `config/api_configs.json`, and the code supports dynamically switching among them.
+- Modify `config/model_config.yaml` to configure API provider priorities.
+- Copy `config/api_configs.json.example` to `config/api_configs.json` and fill in the necessary API keys. Currently supports *siliconflow*, *deepseek_call*, *github_call*, *azure_call*, *qwen_call* APIs. You can configure the priority of each API provider in the config file, and the code supports dynamically switching among them.
 
 ### **4. Running Examples**
 
@@ -314,8 +284,7 @@ Pull Requests and Issues are welcome!
 
 ## Acknowledgments
 
-- [deepseek Janus](https://github.com/deepseek-ai/Janus.git)  
-- [mPLUG-owl3](https://github.com/X-PLUG/mPLUG-Owl.git)  
+- [Google Gemma3](https://github.com/google-research/gemma3)  
 - [sensevoice](https://github.com/FunAudioLLM/SenseVoice.git)
 
 Thank you to everyone who has supported and contributed to this project!

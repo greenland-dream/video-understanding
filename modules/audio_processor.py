@@ -2,11 +2,11 @@ import os
 from pathlib import Path
 from utils.log_config import setup_logger
 from modules.audio_processing.audio_extractor import extract_audio
-from modules.audio_processing.sensevoice_recognition import SenseVoiceTranscriber
+
 
 logger = setup_logger(__name__)
 
-def process_audio(video_path):
+def process_audio(video_path, transcriber):
     """
     Process the audio part of the video: extract and transcribe
     
@@ -26,7 +26,6 @@ def process_audio(video_path):
         
         # 2. Transcribe audio
         logger.info("Starting audio transcription...")
-        transcriber = SenseVoiceTranscriber()
         transcript = transcriber.transcribe(audio_path)
         logger.info(f"Transcription result: {transcript}")
         

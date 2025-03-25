@@ -55,23 +55,6 @@ python -m db.cleanup.db_cleanup --db-path /path/to/video_processing.db --chroma-
 4. It identifies Chroma entries that don't have a corresponding entry in the SQLite database
 5. It deletes those orphaned entries from Chroma (or just lists them in dry-run mode)
 
-## Example Output
-
-```
-INFO:db_cleanup:Starting Chroma database cleanup
-INFO:db_cleanup:SQL database path: /Users/dingding/Documents/Workspace/video-understanding/db/data/video_processing.db
-INFO:db_cleanup:Chroma database path: /Users/dingding/Documents/Workspace/video-understanding/db/data/chroma_db
-INFO:db_cleanup:Found 150 videos in SQL database
-INFO:db_cleanup:Found 320 documents in Chroma database
-INFO:db_cleanup:Found 180 unique videos in Chroma database
-INFO:db_cleanup:Found 30 videos in Chroma that don't exist in SQL database
-INFO:db_cleanup:Will delete 45 documents from Chroma database
-INFO:db_cleanup:DRY RUN: No documents will be deleted
-INFO:db_cleanup:Would delete: 123e4567e89b12d3a456426655440000
-INFO:db_cleanup:Would delete: 123e4567e89b12d3a456426655440000_transcript
-...
-```
-
 ## Recommended Usage
 
 It's recommended to:

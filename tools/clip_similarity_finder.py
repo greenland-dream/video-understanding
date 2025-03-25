@@ -17,9 +17,13 @@ Usage:
 
 import os
 import sys
+from pathlib import Path
+
+# Add parent directory to path to allow imports when running from tools directory
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import argparse
 import shutil
-from pathlib import Path
 import numpy as np
 import logging
 from typing import List, Dict, Tuple, Any
@@ -29,9 +33,10 @@ import threading
 import queue
 import concurrent.futures
 from threading import Lock
-
-# Add parent directory to path to allow imports when running from tools directory
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from modules.video_processor import analyze_video_content_full
+from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+from modules.audio_processing.sensevoice_recognition import SenseVoiceTranscriber
+import torch
 
 # Scene detection imports
 from scenedetect import SceneManager, open_video
@@ -167,130 +172,6 @@ def get_middle_frame(video_path: str, start_timecode, end_timecode) -> Image.Ima
     frame = vr[mid_frame].asnumpy()
     return Image.fromarray(frame)
 
-def analyze_clip(clip_path: str, db: VideoDatabase) -> Dict[str, Any]:
-    """
-    Analyze a video clip to generate a comprehensive description
-    
-    This function performs multiple analyses similar to process_single_video:
-    1. Process audio (extract and transcribe)
-    2. Extract and analyze key frame
-    3. Analyze video content (motion, etc.)
-    4. Combine all results using a reasoning model
-    
-    Args:
-        clip_path: Path to the video clip
-        db: VideoDatabase instance (used only for its configuration)
-        
-    Returns:
-        Dictionary with combined analysis results
-    """
-    import time
-    import traceback
-    from modules.call_sensevoice import process_audio
-    from modules.key_frame_analyzer import analyze_key_frame
-    from modules.video_analyzer import analyze_video_content
-    from modules.call_reasoner import route_providers
-    from utils.utility import extract_json
-    from utils.ffmpeg_funs import extract_representative_frame
-    
-    logger.info(f"Performing comprehensive analysis of clip: {clip_path}")
-    base = os.path.splitext(clip_path)[0]
-    
-    # Initialize result variables
-    transcript = ""
-    duration = 0
-    result_key_frame = {}
-    result_video = {}
-    combined_result = None
-    
-    # 1. Process audio (extract and transcribe)
-    logger.info("1. Processing audio...")
-    time_start1 = time.time()
-    try:
-        transcript = process_audio(clip_path)
-        audio_time = time.time() - time_start1
-        logger.info(f"Audio processing time: {audio_time:.2f} seconds")
-    except Exception as e:
-        logger.error(f"Error processing audio: {str(e)}")
-        logger.error(traceback.format_exc())
-        transcript = "Audio processing failed."
-    
-    # 2. Extract key frame
-    logger.info("2. Extracting key frame...")
-    time_start2 = time.time()
-    temp_image = base + "_keyframe.jpg"
-    key_frame_extracted = False
-    try:
-        key_frame_extracted, duration = extract_representative_frame(clip_path, temp_image)
-        logger.info(f"Key frame extraction time: {time.time() - time_start2:.2f} seconds")
-    except Exception as e:
-        logger.error(f"Error extracting key frame: {str(e)}")
-        logger.error(traceback.format_exc())
-        duration = 0  # Unable to get duration
-    
-    # 3. Analyze key frame
-    if not key_frame_extracted or not os.path.exists(temp_image) or os.path.getsize(temp_image) == 0:
-        logger.warning("Key frame extraction failed or produced an empty image")
-        result_key_frame = {"answer": "Failed to analyze key frame"}
-    else:
-        logger.info("3. Analyzing key frame...")
-        time_start3 = time.time()
-        try:
-            result_key_frame = analyze_key_frame(temp_image)
-            key_frame_time = time.time() - time_start3
-            logger.info(f"Key frame analysis time: {key_frame_time:.2f} seconds")
-        except Exception as e:
-            logger.error(f"Error analyzing key frame: {str(e)}")
-            logger.error(traceback.format_exc())
-            result_key_frame = {"answer": "Failed to analyze key frame"}
-    
-    # Delete temporary image regardless of success or failure
-    if os.path.exists(temp_image):
-        os.remove(temp_image)
-    
-    # 4. Analyze video
-    logger.info("4. Analyzing video...")
-    time_start4 = time.time()
-    try:
-        result_video = analyze_video_content(clip_path)
-        video_time = time.time() - time_start4
-        logger.info(f"Video analysis time: {video_time:.2f} seconds")
-    except Exception as e:
-        logger.error(f"Error in video analysis: {str(e)}")
-        logger.error(traceback.format_exc())
-        result_video = {"answer": "Video analysis failed"}
-    
-    # 5. Combine all analysis results
-    logger.info("5. Combining analysis results...")
-    try:
-        # Use empty string for meta_data
-        meta_data = ""
-        # 使用项目根目录路径
-        project_root = Path(__file__).resolve().parent.parent
-        prompt_path = "combine_video_image_results.md"
-        
-        combined_result = route_providers(
-            None,  # No specific provider, try by priority
-            meta_data,
-            duration,
-            transcript,
-            result_key_frame,
-            result_video,
-            prompt_path
-        )
-        combined_result = extract_json(combined_result)
-    except Exception as e:
-        logger.error(f"Error combining analysis results: {str(e)}")
-        logger.error(traceback.format_exc())
-        # Create a simple combined result if the combination fails
-        combined_result = {
-            "answer": "Failed to combine analysis results. Individual analyses available.",
-            "key_frame_analysis": result_key_frame.get("answer", "No key frame analysis"),
-            "video_analysis": result_video.get("answer", "No video analysis"),
-            "transcript": transcript[:500] + "..." if len(transcript) > 500 else transcript
-        }
-    
-    return combined_result
 
 def find_similar_videos(description: str, min_duration: float, query_system: VideoQuerySystem, limit: int = 5, background: str = "") -> List[Dict[str, Any]]:
     """
@@ -518,6 +399,14 @@ def process_video(video_path: str, output_dir: str, threshold: float = 27, min_d
             logger.info("Operation cancelled by user")
             return
     
+    ckpt = "google/gemma-3-4b-it"
+    video_understand_model = Gemma3ForConditionalGeneration.from_pretrained(
+        ckpt, device_map="auto", torch_dtype=torch.bfloat16,
+    )
+    video_understand_processor = AutoProcessor.from_pretrained(ckpt)
+    transcriber = SenseVoiceTranscriber()
+
+
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     
@@ -575,28 +464,52 @@ def process_video(video_path: str, output_dir: str, threshold: float = 27, min_d
                 
                 # Analyze clip (this part remains sequential)
                 logger.info(f"Starting analysis for clip {i}")
-                analysis_result = analyze_clip(clip_path, db)
-                
+                analysis_result = analyze_video_content_full(clip_path, transcriber, video_understand_model, video_understand_processor)
                 # Get description from analysis result
                 try:
-                    # Try to parse the analysis result as JSON if it's a string
-                    if isinstance(analysis_result, str):
-                        analysis_json = json.loads(analysis_result)
-                    else:
-                        analysis_json = analysis_result
+                    # Initialize description variable with a default value
+                    description = ""
                     
-                    # Extract the description field - try different possible field names
-                    description = analysis_json.get("answer", 
-                                  analysis_json.get("description", 
-                                  analysis_json.get("content", "No description available")))
+                    # The analyze_video_content_full function now returns a dictionary with specific fields
+                    # Extract the combined_result field which contains our description
+                    combined_result = analysis_result.get("combined_result", {})
                     
-                    # If description is still not found, use a fallback approach
-                    if description == "No description available" and isinstance(analysis_json, dict):
-                        # Look for any field that might contain a description
-                        for key in ["video_description", "scene_description", "summary", "text"]:
-                            if key in analysis_json and analysis_json[key]:
-                                description = analysis_json[key]
-                                break
+                    # combined_result might be a string, dict, or None
+                    if isinstance(combined_result, str):
+                        try:
+                            # Try to parse it as JSON if it's a string
+                            import json
+                            combined_result = json.loads(combined_result)
+                        except:
+                            # If parsing fails, use it directly as description
+                            description = combined_result
+                    
+                    # If combined_result is a dict, extract description from it
+                    if isinstance(combined_result, dict):
+                        # Try different possible field names in the combined_result
+                        description = combined_result.get("description", 
+                                     combined_result.get("answer",
+                                     combined_result.get("content",
+                                     combined_result.get("video_description", ""))))
+                    
+                    # If we couldn't find a description in combined_result, try result_video
+                    if not description:
+                        result_video = analysis_result.get("result_video", {})
+                        if result_video:
+                            description = result_video
+                            if isinstance(description, dict):
+                                description = description.get("description", str(description))
+                    
+                    # If we still don't have a description, use transcript or other fields as fallback
+                    if not description:
+                        transcript = analysis_result.get("transcript", "")
+                        meta_data = analysis_result.get("meta_data", "")
+                        description = f"Transcript: {transcript}\nMetadata: {meta_data}"
+                    
+                    # Ensure description is a string
+                    if not isinstance(description, str):
+                        description = str(description)
+                        
                 except Exception as e:
                     logger.warning(f"Failed to extract description from analysis result: {str(e)}")
                     description = "No description available"

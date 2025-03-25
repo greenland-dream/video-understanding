@@ -225,6 +225,29 @@ def search():
             if not transcript and result.get('video_path'):
                 # If there's no transcript in the result, try to get it from the database
                 transcript = query_system._get_transcript_for_video(result['video_path'])
+                
+            # Get star rating from database if available
+            star_rating = 0
+            try:
+                # Connect to database
+                conn = sqlite3.connect(str(DB_PATH))
+                cursor = conn.cursor()
+                
+                # Query star_rating for this video
+                cursor.execute("SELECT star_rating FROM processed_videos WHERE file_path = ?", 
+                              (result['video_path'],))
+                rating_result = cursor.fetchone()
+                
+                if rating_result and rating_result[0] is not None:
+                    star_rating = rating_result[0]
+                
+                conn.close()
+            except Exception as e:
+                print(f"Error getting star rating: {e}")
+            
+            # Include star rating in metadata
+            if 'metadata' in result:
+                result['metadata']['star_rating'] = star_rating
             
             formatted_result = {
                 'video_path': result['video_path'],
@@ -258,6 +281,7 @@ def search():
 @app.route('/check_file')
 def check_file():
     file_path = request.args.get('path')
+    
     if not file_path:
         return jsonify({'error': 'No file path provided'}), 400
     
@@ -277,6 +301,63 @@ def check_file():
         'file_info': file_info,
         'video_id': hashlib.md5(file_path.encode()).hexdigest() if exists else None
     })
+
+@app.route('/update_rating', methods=['POST'])
+def update_rating():
+    """Update the star rating for a video"""
+    video_path = request.json.get('video_path')
+    rating = request.json.get('rating')
+    
+    if not video_path:
+        return jsonify({'success': False, 'error': 'No video path provided'}), 400
+    
+    try:
+        # Validate rating
+        rating = int(rating)
+        if rating < 0 or rating > 5:
+            return jsonify({'success': False, 'error': 'Rating must be between 0 and 5'}), 400
+        
+        # Connect to database
+        conn = sqlite3.connect(str(DB_PATH))
+        cursor = conn.cursor()
+        
+        # Update the rating
+        cursor.execute(
+            "UPDATE processed_videos SET star_rating = ? WHERE file_path = ?",
+            (rating, video_path)
+        )
+        conn.commit()
+        
+        # Check if any rows were affected
+        if cursor.rowcount > 0:
+            conn.close()
+            return jsonify({'success': True})
+        else:
+            # If no rows were affected, the video may not be in the database yet
+            # Get the file hash to identify the video
+            unified_id = hashlib.md5(video_path.encode()).hexdigest()
+            file_hash = ""
+            
+            if os.path.exists(video_path):
+                # Compute file hash if needed
+                with open(video_path, 'rb') as f:
+                    file_hash = hashlib.md5(f.read()).hexdigest()
+            
+            # Try to insert a basic record with the rating
+            try:
+                cursor.execute(
+                    "INSERT INTO processed_videos (id, file_path, file_hash, star_rating) VALUES (?, ?, ?, ?)",
+                    (unified_id, video_path, file_hash, rating)
+                )
+                conn.commit()
+                conn.close()
+                return jsonify({'success': True})
+            except:
+                conn.close()
+                return jsonify({'success': False, 'error': 'Could not update rating, video not found'}), 404
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/stream_video/<video_id>')
 def stream_video(video_id):

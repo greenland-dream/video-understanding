@@ -34,7 +34,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Import for API calls and local model
 from modules.call_parse_api import call_parse_api
-from modules.call_qwenQwQ import generate_response
 from modules.call_reasoner import route_providers
 
 # Database imports
@@ -116,15 +115,8 @@ def expand_instruction_to_text(instruction: str, target_duration: int = 25, back
             logger.info("Successfully used remote API for instruction expansion")
         except Exception as e:
             logger.warning(f"Remote API call failed for instruction expansion: {str(e)}")
-            logger.info("Falling back to local model for instruction expansion")
-            
-            # Fallback to local model
-            expanded_text = generate_response(
-                prompt=formatted_prompt,
-                max_tokens=1024,
-                temperature=0.7,
-                verbose=True
-            )
+            logger.error("Local model functionality has been removed. Cannot proceed without API access.")
+            raise RuntimeError("Cannot perform instruction expansion: API unavailable and local model has been removed")
     
     finally:
         # Clean up the temporary file
@@ -184,22 +176,14 @@ def split_text_into_segments(text: str, background: str = "") -> List[Dict[str, 
                 meta_data="",
                 duration="",
                 transcript="",
-                key_frame_analyzing_results="",
                 video_analyzing_results="",
                 prompt=temp_prompt_file
             )
             logger.info("Successfully used remote API for text segmentation")
         except Exception as e:
             logger.warning(f"Remote API call failed for text segmentation: {str(e)}")
-            logger.info("Falling back to local model for text segmentation")
-            
-            # Fallback to local model
-            response_content = generate_response(
-                prompt=formatted_prompt,
-                max_tokens=4096,
-                temperature=0.7,
-                verbose=True
-            )
+            logger.error("Local model functionality has been removed. Cannot proceed without API access.")
+            raise RuntimeError("Cannot perform text segmentation: API unavailable and local model has been removed")
     
     finally:
         # Clean up the temporary file
@@ -325,22 +309,14 @@ def generate_video_description(text_segment: str, background: str = "") -> str:
                 meta_data="",
                 duration="",
                 transcript="",
-                key_frame_analyzing_results="",
                 video_analyzing_results="",
                 prompt=temp_prompt_file
             )
             logger.info("Successfully used remote API for video description generation")
         except Exception as e:
             logger.warning(f"Remote API call failed for video description generation: {str(e)}")
-            logger.info("Falling back to local model for video description generation")
-            
-            # Fallback to local model
-            description = generate_response(
-                prompt=formatted_prompt,
-                max_tokens=1024,
-                temperature=0.7,
-                verbose=True
-            )
+            logger.error("Local model functionality has been removed. Cannot proceed without API access.")
+            raise RuntimeError("Cannot perform video description generation: API unavailable and local model has been removed")
     
     finally:
         # Clean up the temporary file
